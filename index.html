@@ -673,7 +673,7 @@ async function fetchAllFeeds(){
   const sourceIds = enabled.map(s => s.id).join(',');
   
   try {
-    const res = await fetch(`/.netlify/functions/news?sources=${sourceIds}`);
+    const res = await fetch(`/api/news?sources=${sourceIds}`);
     if (!res.ok) throw new Error('Network response was not ok');
     
     const data = await res.json();
