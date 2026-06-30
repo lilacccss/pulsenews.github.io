@@ -551,28 +551,21 @@ function calculateMajorScore(article) {
   const title = (article.title || '').toLowerCase();
   const desc = (article.description || '').toLowerCase();
   
-  // Keywords that indicate major news
   const majorWords = ['breaking', 'major', 'historic', 'crisis', 'deal', 'launch', 'dies', 'killed', 'attack', 'win', 'loses', 'election', 'warns', 'alert', 'exclusive', 'collapse'];
   majorWords.forEach(w => {
     if (title.includes(w)) score += 50;
     if (desc.includes(w)) score += 10;
   });
   
-  // Title length (longer titles often more detailed)
   if (title.length > 60) score += 15;
-  
-  // Description depth
   if (desc.length > 150) score += 20;
   
-  // Premium sources
   if (article.source) {
     const topSources = ['bbc', 'nyt', 'guardian', 'aljazeera', 'cnbc', 'economist'];
     if (topSources.includes(article.source.id)) score += 15;
   }
   
-  // Add slight randomness to break ties
   score += Math.random() * 10;
-  
   return score;
 }
 
@@ -607,7 +600,7 @@ function playBeep(){
 }
 
 // ============================================================
-// Account System (Simulated Client-Side)
+// Account System
 // ============================================================
 function getUsers(){ return JSON.parse(localStorage.getItem('pulse_users') || '{}'); }
 function saveUsers(users){ localStorage.setItem('pulse_users', JSON.stringify(users)); }
@@ -786,19 +779,28 @@ async function fetchAllFeeds(){
     
     checkKeywordAlerts(fetchedArticles);
     
-    document.getElementById('statArticles').textContent = state.articles.length;
-    document.getElementById('statSources').textContent = sourcesOk;
-    document.getElementById('statSourcesTotal').textContent = enabled.length;
-    document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
-    
     state.loading = false;
     applyFilters();
-    updateTicker();
+    
+    // Isolate UI updates so they can't accidentally trigger the catch block
+    try {
+      document.getElementById('statArticles').textContent = state.articles.length;
+      document.getElementById('statSources').textContent = sourcesOk;
+      document.getElementById('statSourcesTotal').textContent = enabled.length;
+      document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+      updateTicker();
+    } catch(e) {
+      console.error("UI Update error:", e);
+    }
+
   } catch (error) {
     console.error('Fetch error:', error);
     state.loading = false;
-    document.getElementById('loadingState').classList.add('hidden');
-    document.getElementById('emptyState').classList.remove('hidden');
+    // Only show the error if we truly have no articles to display
+    if (state.articles.length === 0) {
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('emptyState').classList.remove('hidden');
+    }
   }
 }
 
@@ -1233,10 +1235,9 @@ function closeModal(){
 }
 
 // ============================================================
-// Markets Logic (Simulated Live Data)
+// Markets Logic
 // ============================================================
 function initMarkets() {
-  // Initialize history for all instruments
   [...state.markets.indices, ...state.markets.stocks].forEach(inst => {
     inst.history = Array.from({length: 30}, () => inst.price * (1 + (Math.random() - 0.5) * 0.01));
   });
@@ -1246,7 +1247,6 @@ function initMarkets() {
 
 function updateMarkets() {
   [...state.markets.indices, ...state.markets.stocks].forEach(inst => {
-    // Random walk
     const volatility = 0.002;
     const change = inst.price * (Math.random() - 0.5) * volatility;
     inst.price = Math.max(inst.price + change, 1);
@@ -1267,7 +1267,6 @@ function renderMarkets() {
     const color = isUp ? 'var(--bull)' : 'var(--bear)';
     const bgColor = isUp ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)';
     
-    // Sparkline calculation
     const min = Math.min(...inst.history);
     const max = Math.max(...inst.history);
     const range = max - min || 1;
@@ -1386,7 +1385,6 @@ function init(){
     }
   });
   
-  // Drawer Logic
   document.getElementById('settingsBtn').addEventListener('click', () => {
     document.body.classList.add('drawer-open');
   });
@@ -1397,7 +1395,6 @@ function init(){
     document.body.classList.remove('drawer-open');
   });
   
-  // Major/All Toggle
   document.getElementById('toggleMajorBtn').addEventListener('click', (e) => {
     state.showMajorOnly = !state.showMajorOnly;
     const btn = e.currentTarget;
@@ -1457,7 +1454,6 @@ function init(){
       document.querySelectorAll('.sort-chip').forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
       state.sort = chip.dataset.sort;
-      // If switching sort, turn off major mode automatically
       if (state.showMajorOnly) {
         state.showMajorOnly = false;
         document.getElementById('toggleMajorBtn').textContent = 'View Major Only';
@@ -1467,7 +1463,6 @@ function init(){
     });
   });
   
-  // Tab Switching
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -1520,10 +1515,8 @@ function init(){
   updateClock();
   setInterval(updateClock, 1000);
   
-  // Initialize Markets
   initMarkets();
   
-  // Fetch real live articles immediately on load
   fetchAllFeeds();
   setInterval(fetchAllFeeds, 5 * 60 * 1000);
 }
